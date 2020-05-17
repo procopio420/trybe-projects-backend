@@ -1,9 +1,9 @@
 const Pool = require('pg').Pool;
 const pool = new Pool({
-  host: 'localhost',
-  database: 'new-trybe',
-  user: 'postgres',
-  password: 'docker',
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  }
 });
 
 const getClassId = async (request, response) => {
