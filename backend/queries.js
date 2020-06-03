@@ -1,9 +1,15 @@
 const Pool = require('pg').Pool;
+const fetch = require('node-fetch');
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false,
-  }
+  // connectionString: process.env.DATABASE_URL,
+  // ssl: {
+  //   rejectUnauthorized: false,
+  // }
+  host: 'localhost',
+  port: 5432,
+  user: 'postgres',
+  password: 'docker',
+  database: 'new-trybe',
 });
 
 const getClassId = async (request, response) => {
@@ -53,7 +59,7 @@ const createRepository = async (request, response) => {
 
   try {
     const repositoriesAlreadyThere = await pool.query(
-      getRepositoriesAlreadyThereQuery
+      getRepositoriesAlreadyThereQuery,
     );
     if (repositoriesAlreadyThere.rows.length === 0) {
       await pool.query(insertRepositoryQuery, [
@@ -74,20 +80,21 @@ const createRepository = async (request, response) => {
 const getCodeReviewPair = async (request, response) => {
   const { repository_id } = request.params;
 
-  const getPairsQuery = `SELECT student1, student2 FROM code_review_pair WHERE repository_id = ${repository_id}`;
+  const getPairsQuery = `SELECT student1, student2, url_student_2, avatar_student_1, avatar_student_2, reviewers_student_2 FROM code_review_pair WHERE repository_id = ${repository_id}`;
 
   try {
-    const result = await pool.query(getPairsQuery)
+    const result = await pool.query(getPairsQuery);
     return response.status(200).json(result.rows);
   } catch (err) {
     return response.status(500).json({ ok: false });
   }
-}
+};
 
 const createCodeReviewPair = (request, response) => {
-  const { students, repository_id } = request.body;
+  const { data, repository_id } = request.body;
 
-  const insertPairQuery = `INSERT INTO code_review_pair (student1, student2, repository_id) VALUES ($1, $2, $3)`;
+  const insertPairQuery =
+    'INSERT INTO code_review_pair (student1, student2, repository_id, url_student_2, avatar_student_1, avatar_student_2, reviewers_student_2, code_review_done) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)';
 
   function shuffle(arrayOrdenado) {
     let arrayAleatorio = [];
@@ -95,7 +102,7 @@ const createCodeReviewPair = (request, response) => {
       let indexAleatorio = Math.floor(Math.random() * arrayOrdenado.length);
       while (
         arrayAleatorio.find(
-          (elemento) => elemento === arrayOrdenado[indexAleatorio]
+          elemento => elemento === arrayOrdenado[indexAleatorio],
         )
       ) {
         indexAleatorio = Math.floor(Math.random() * arrayOrdenado.length);
@@ -110,9 +117,9 @@ const createCodeReviewPair = (request, response) => {
   let thereIsAlonePairs = true;
   while (thereIsAlonePairs) {
     thereIsAlonePairs = false;
-    randomStudents = shuffle(students);
+    randomStudents = shuffle(data);
     for (let i = 0; i < randomStudents.length; i++) {
-      if (students[i] === randomStudents[i]) {
+      if (data[i] === randomStudents[i]) {
         thereIsAlonePairs = true;
         break;
       }
@@ -120,23 +127,33 @@ const createCodeReviewPair = (request, response) => {
   }
 
   try {
-    students.forEach(async (student, index) => {
+    data.forEach(async (student, index) => {
       const student1 = student;
       const student2 = randomStudents[index];
-      const getStudents1AlreadyThereQuery = `SELECT student1 FROM code_review_pair WHERE student1 = '${student1}' AND repository_id = ${repository_id}`;
-      const getStudents2AlreadyThereQuery = `SELECT student2 FROM code_review_pair WHERE student2 = '${student2}' AND repository_id = ${repository_id}`;
+      const getStudents1AlreadyThereQuery = `SELECT student1 FROM code_review_pair WHERE student1 = '${student1.student}' AND repository_id = ${repository_id}`;
+      const getStudents2AlreadyThereQuery = `SELECT student2 FROM code_review_pair WHERE student2 = '${student2.student}' AND repository_id = ${repository_id}`;
+      const updateCodeReviewDoneQuery = `UPDATE code_review_pair SET code_review_done = true WHERE student1 = '${student1.student}' AND student2 = '${student2.student}' AND repository_id = ${repository_id}`;
 
       const students1AlreadyThere = await pool.query(
-        getStudents1AlreadyThereQuery
+        getStudents1AlreadyThereQuery,
       );
       const students2AlreadyThere = await pool.query(
-        getStudents2AlreadyThereQuery
+        getStudents2AlreadyThereQuery,
       );
       if (
         !students1AlreadyThere.rows.length &&
         !students2AlreadyThere.rows.length
       ) {
-        await pool.query(insertPairQuery, [student1, student2, repository_id]);
+        await pool.query(insertPairQuery, [
+          student1.student,
+          student2.student,
+          repository_id,
+          student2.url,
+          student1.avatar,
+          student2.avatar,
+          JSON.stringify(student2.reviewers),
+          false,
+        ]);
       }
     });
 
