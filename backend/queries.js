@@ -5,7 +5,7 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
     rejectUnauthorized: false,
-  }
+  },
 });
 
 const getClassId = async (request, response) => {
@@ -106,11 +106,7 @@ const updateCodeReviewDone = async (request, response) => {
         if (res.length) {
           if (res.some(comment => comment.user.login === pair.student1)) {
             await pool.query(updateTrueCodeReviewDoneQuery);
-          } else {
-            await pool.query(updateFalseCodeReviewDoneQuery);
           }
-        } else {
-          await pool.query(updateFalseCodeReviewDoneQuery);
         }
       });
   });
