@@ -13,6 +13,8 @@ app.post('/createClass', db.createClass);
 app.post('/createRepository', db.createRepository);
 app.post('/createPair', db.createCodeReviewPair);
 
+app.get('/update/:repository_id', db.updateCodeReviewDone);
+
 app.listen(process.env.PORT || 8000, () => {
   console.log('Server started!');
 });

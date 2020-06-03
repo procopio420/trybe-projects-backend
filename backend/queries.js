@@ -1,15 +1,11 @@
 const Pool = require('pg').Pool;
 const fetch = require('node-fetch');
+
 const pool = new Pool({
-  // connectionString: process.env.DATABASE_URL,
-  // ssl: {
-  //   rejectUnauthorized: false,
-  // }
-  host: 'localhost',
-  port: 5432,
-  user: 'postgres',
-  password: 'docker',
-  database: 'new-trybe',
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  }
 });
 
 const getClassId = async (request, response) => {
@@ -80,7 +76,7 @@ const createRepository = async (request, response) => {
 const getCodeReviewPair = async (request, response) => {
   const { repository_id } = request.params;
 
-  const getPairsQuery = `SELECT student1, student2, url_student_2, avatar_student_1, avatar_student_2, reviewers_student_2 FROM code_review_pair WHERE repository_id = ${repository_id}`;
+  const getPairsQuery = `SELECT student1, student2, url_student_2, avatar_student_1, avatar_student_2, reviewers_student_2, code_review_done FROM code_review_pair WHERE repository_id = ${repository_id}`;
 
   try {
     const result = await pool.query(getPairsQuery);
@@ -88,6 +84,38 @@ const getCodeReviewPair = async (request, response) => {
   } catch (err) {
     return response.status(500).json({ ok: false });
   }
+};
+
+const updateCodeReviewDone = async (request, response) => {
+  const { repository_id } = request.params;
+
+  const selectAllPairs = `SELECT * FROM code_review_pair WHERE repository_id = ${repository_id}`;
+
+  const results = await pool.query(selectAllPairs);
+
+  results.rows.forEach(pair => {
+    const updateTrueCodeReviewDoneQuery = `UPDATE code_review_pair SET code_review_done = true WHERE student1 = '${pair.student1}' AND student2 = '${pair.student2}' AND repository_id = ${repository_id}`;
+    const updateFalseCodeReviewDoneQuery = `UPDATE code_review_pair SET code_review_done = false WHERE student1 = '${pair.student1}' AND student2 = '${pair.student2}' AND repository_id = ${repository_id}`;
+    fetch(pair.reviewers_student_2, {
+      headers: {
+        Authorization: 'token 63c9af36681217adabd04c9eb5ae4d7e466e12b6',
+      },
+    })
+      .then(res => res.json())
+      .then(async res => {
+        if (res.length) {
+          if (res.some(comment => comment.user.login === pair.student1)) {
+            await pool.query(updateTrueCodeReviewDoneQuery);
+          } else {
+            await pool.query(updateFalseCodeReviewDoneQuery);
+          }
+        } else {
+          await pool.query(updateFalseCodeReviewDoneQuery);
+        }
+      });
+  });
+
+  return response.status(200).json(results.rows);
 };
 
 const createCodeReviewPair = (request, response) => {
@@ -132,7 +160,6 @@ const createCodeReviewPair = (request, response) => {
       const student2 = randomStudents[index];
       const getStudents1AlreadyThereQuery = `SELECT student1 FROM code_review_pair WHERE student1 = '${student1.student}' AND repository_id = ${repository_id}`;
       const getStudents2AlreadyThereQuery = `SELECT student2 FROM code_review_pair WHERE student2 = '${student2.student}' AND repository_id = ${repository_id}`;
-      const updateCodeReviewDoneQuery = `UPDATE code_review_pair SET code_review_done = true WHERE student1 = '${student1.student}' AND student2 = '${student2.student}' AND repository_id = ${repository_id}`;
 
       const students1AlreadyThere = await pool.query(
         getStudents1AlreadyThereQuery,
@@ -151,7 +178,7 @@ const createCodeReviewPair = (request, response) => {
           student2.url,
           student1.avatar,
           student2.avatar,
-          JSON.stringify(student2.reviewers),
+          student2.review_url,
           false,
         ]);
       }
@@ -169,4 +196,5 @@ module.exports = {
   createRepository,
   getCodeReviewPair,
   createCodeReviewPair,
+  updateCodeReviewDone,
 };
