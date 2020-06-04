@@ -2,15 +2,15 @@ const Pool = require('pg').Pool;
 const fetch = require('node-fetch');
 
 const pool = new Pool({
-  // connectionString: process.env.DATABASE_URL,
-  // ssl: {
-  //   rejectUnauthorized: false,
-  // }
-  host: 'localhost',
-  port: 5432,
-  user: 'postgres',
-  password: 'docker',
-  database: 'new-trybe',
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  }
+  // host: 'localhost',
+  // port: 5432,
+  // user: 'postgres',
+  // password: 'docker',
+  // database: 'new-trybe',
 });
 
 const getClassId = async (request, response) => {
@@ -111,15 +111,11 @@ const updateCodeReviewDone = async (request, response) => {
         if (res.length) {
           if (res.some(comment => comment.user.login === pair.student1)) {
             await pool.query(updateTrueCodeReviewDoneQuery);
-            console.log('updated')
           } else {
             await pool.query(updateFalseCodeReviewDoneQuery);
-            console.log('nao encontrou')
           }
         } else {
           await pool.query(updateFalseCodeReviewDoneQuery);
-          console.log('vazio')
-          console.log(res)
         }
       });
   });
