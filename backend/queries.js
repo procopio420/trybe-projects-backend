@@ -5,7 +5,7 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
     rejectUnauthorized: false,
-  }
+  },
   // host: 'localhost',
   // port: 5432,
   // user: 'postgres',
@@ -101,11 +101,7 @@ const updateCodeReviewDone = async (request, response) => {
   results.rows.forEach(pair => {
     const updateTrueCodeReviewDoneQuery = `UPDATE code_review_pair SET code_review_done = true WHERE student1 = '${pair.student1}' AND student2 = '${pair.student2}' AND repository_id = ${repository_id}`;
     const updateFalseCodeReviewDoneQuery = `UPDATE code_review_pair SET code_review_done = false WHERE student1 = '${pair.student1}' AND student2 = '${pair.student2}' AND repository_id = ${repository_id}`;
-    fetch(pair.reviewers_student_2, {
-      headers: {
-        Authorization: 'token f8e2fbae69629480509da5a23d0b4f30bf9b4eb5',
-      },
-    })
+    fetch(pair.reviewers_student_2)
       .then(res => res.json())
       .then(async res => {
         if (res.length) {
