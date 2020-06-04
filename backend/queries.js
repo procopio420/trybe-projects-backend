@@ -2,10 +2,15 @@ const Pool = require('pg').Pool;
 const fetch = require('node-fetch');
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  // connectionString: process.env.DATABASE_URL,
+  // ssl: {
+  //   rejectUnauthorized: false,
+  // }
+  host: 'localhost',
+  port: 5432,
+  user: 'postgres',
+  password: 'docker',
+  database: 'new-trybe',
 });
 
 const getClassId = async (request, response) => {
@@ -98,7 +103,7 @@ const updateCodeReviewDone = async (request, response) => {
     const updateFalseCodeReviewDoneQuery = `UPDATE code_review_pair SET code_review_done = false WHERE student1 = '${pair.student1}' AND student2 = '${pair.student2}' AND repository_id = ${repository_id}`;
     fetch(pair.reviewers_student_2, {
       headers: {
-        Authorization: 'token 63c9af36681217adabd04c9eb5ae4d7e466e12b6',
+        Authorization: 'token f8e2fbae69629480509da5a23d0b4f30bf9b4eb5',
       },
     })
       .then(res => res.json())
@@ -106,7 +111,15 @@ const updateCodeReviewDone = async (request, response) => {
         if (res.length) {
           if (res.some(comment => comment.user.login === pair.student1)) {
             await pool.query(updateTrueCodeReviewDoneQuery);
+            console.log('updated')
+          } else {
+            await pool.query(updateFalseCodeReviewDoneQuery);
+            console.log('nao encontrou')
           }
+        } else {
+          await pool.query(updateFalseCodeReviewDoneQuery);
+          console.log('vazio')
+          console.log(res)
         }
       });
   });
