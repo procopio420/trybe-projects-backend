@@ -2,15 +2,15 @@ const Pool = require('pg').Pool;
 const fetch = require('node-fetch');
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false,
-  },
-  // host: 'localhost',
-  // port: 5432,
-  // user: 'postgres',
-  // password: 'docker',
-  // database: 'new-trybe',
+  // connectionString: process.env.DATABASE_URL,
+  // ssl: {
+  //   rejectUnauthorized: false,
+  // },
+  host: 'localhost',
+  port: 5432,
+  user: 'postgres',
+  password: 'docker',
+  database: 'new-trybe',
 });
 
 const getClassId = async (request, response) => {
@@ -42,6 +42,7 @@ const createClass = async (request, response) => {
     const result = await pool.query(getClassIdQuery);
     return response.status(200).json(result.rows[0]);
   } catch (err) {
+    console.log(err)
     return response.status(500).json({ ok: false });
   }
 };
@@ -80,6 +81,7 @@ const createRepository = async (request, response) => {
 
 const getCodeReviewPair = async (request, response) => {
   const { repository_id } = request.params;
+  console.log('get')
 
   const getPairsQuery = `SELECT student1, student2, url_student_2, avatar_student_1, avatar_student_2, reviewers_student_2, code_review_done FROM code_review_pair WHERE repository_id = ${repository_id}`;
 
@@ -91,36 +93,37 @@ const getCodeReviewPair = async (request, response) => {
   }
 };
 
-const updateCodeReviewDone = async (request, response) => {
-  const { repository_id } = request.params;
+// const updateCodeReviewDone = async (request, response) => {
+//   const { repository_id } = request.params;
+//   console.log('update')
+//   const selectAllPairs = `SELECT * FROM code_review_pair WHERE repository_id = ${repository_id}`;
 
-  const selectAllPairs = `SELECT * FROM code_review_pair WHERE repository_id = ${repository_id}`;
+//   const results = await pool.query(selectAllPairs);
 
-  const results = await pool.query(selectAllPairs);
+//   results.rows.forEach(pair => {
+//     const updateTrueCodeReviewDoneQuery = `UPDATE code_review_pair SET code_review_done = true WHERE student1 = '${pair.student1}' AND student2 = '${pair.student2}' AND repository_id = ${repository_id}`;
+//     const updateFalseCodeReviewDoneQuery = `UPDATE code_review_pair SET code_review_done = false WHERE student1 = '${pair.student1}' AND student2 = '${pair.student2}' AND repository_id = ${repository_id}`;
+//     fetch(pair.reviewers_student_2)
+//       .then(res => res.json())
+//       .then(async res => {
+//         if (res.length) {
+//           if (res.some(comment => comment.user.login === pair.student1)) {
+//             await pool.query(updateTrueCodeReviewDoneQuery);
+//           } else {
+//             await pool.query(updateFalseCodeReviewDoneQuery);
+//           }
+//         } else {
+//           await pool.query(updateFalseCodeReviewDoneQuery);
+//         }
+//       });
+//   });
 
-  results.rows.forEach(pair => {
-    const updateTrueCodeReviewDoneQuery = `UPDATE code_review_pair SET code_review_done = true WHERE student1 = '${pair.student1}' AND student2 = '${pair.student2}' AND repository_id = ${repository_id}`;
-    const updateFalseCodeReviewDoneQuery = `UPDATE code_review_pair SET code_review_done = false WHERE student1 = '${pair.student1}' AND student2 = '${pair.student2}' AND repository_id = ${repository_id}`;
-    fetch(pair.reviewers_student_2)
-      .then(res => res.json())
-      .then(async res => {
-        if (res.length) {
-          if (res.some(comment => comment.user.login === pair.student1)) {
-            await pool.query(updateTrueCodeReviewDoneQuery);
-          } else {
-            await pool.query(updateFalseCodeReviewDoneQuery);
-          }
-        } else {
-          await pool.query(updateFalseCodeReviewDoneQuery);
-        }
-      });
-  });
-
-  return response.status(200).json(results.rows);
-};
+//   return response.status(200).json(results.rows);
+// };
 
 const createCodeReviewPair = (request, response) => {
   const { data, repository_id } = request.body;
+  console.log('create')
 
   const insertPairQuery =
     'INSERT INTO code_review_pair (student1, student2, repository_id, url_student_2, avatar_student_1, avatar_student_2, reviewers_student_2, code_review_done) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)';
@@ -197,5 +200,4 @@ module.exports = {
   createRepository,
   getCodeReviewPair,
   createCodeReviewPair,
-  updateCodeReviewDone,
 };
